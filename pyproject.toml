@@ -1,0 +1,74 @@
+[project]
+name = "my"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "jinja2>=3.1.6",
+    "litestar>=2.21.0",
+    "uvicorn>=0.41.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+    "ruff>=0.15.1",
+]
+
+
+
+[tool.ruff]
+line-length = 88
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+]
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint]
+select = [
+    "BLE",
+    "C90",
+    "E",
+    "F",
+    "G",
+    "I",
+    "ICN",
+    "ISC",
+    "PLE",
+    "Q",
+    "RUF006",
+    "RUF100",
+    "T10",
+    "T20",
+    "TID",
+    "UP",
+    "W",
+]
+ignore = ["ISC001"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["screener"]
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+ignore_missing_imports = false
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+    "aiocache.*",
+]

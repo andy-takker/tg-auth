@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <pre id="auth-debug" style="white-space: pre-wrap; font: 12px/1.4 monospace; padding: 12px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; max-width: 720px;">
+[auth] page loaded
+  </pre>
+  <script async src="https://telegram.org/js/telegram-widget.js?22"
+        data-telegram-login="auth_tg_dev_bot"
+        data-size="large"
+        data-userpic="false"
+        data-request-access="write"
+        data-onauth="onTelegramAuth(user)">
+</script>
+</body>
+</html>
+
+
+
+<script>
+  function logAuth(message, data) {
+    const node = document.getElementById("auth-debug");
+    const line = data === undefined ? message : `${message} ${JSON.stringify(data)}`;
+    console.log("[auth]", message, data ?? "");
+    if (node) {
+      node.textContent += `\n${line}`;
+    }
+  }
+
+  window.addEventListener("load", () => {
+    logAuth("window.load");
+  });
+
+  async function onTelegramAuth(user) {
+    logAuth("onTelegramAuth called", user);
+    const res = await fetch("/api/v1/auth/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(user),
+    });
+    logAuth("fetch completed", { status: res.status, ok: res.ok });
+    if (!res.ok) {
+      const body = await res.text();
+      logAuth("Telegram login failed", { body });
+      return;
+    }
+    logAuth("redirecting to /app");
+    window.location.href = "/app";
+  }
+
+  window.onTelegramAuth = onTelegramAuth;
+  logAuth("onTelegramAuth exported to window");
+</script>
