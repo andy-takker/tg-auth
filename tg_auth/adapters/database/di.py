@@ -7,8 +7,9 @@ from tg_auth.adapters.database.config import DatabaseConfig
 from tg_auth.adapters.database.repositories.users import UsersRepository
 from tg_auth.adapters.database.uow import SqlalchemyUow
 from tg_auth.adapters.database.utils import create_engine, create_sessionmaker
-from tg_auth.config import AppConfig
-from tg_auth.domain.uow import AbstractUow
+from tg_auth.application.config import AppConfig
+from tg_auth.domains.interfaces.users import IUsersRepository
+from tg_auth.domains.uow import AbstractUow
 
 
 class DatabaseProvider(Provider):
@@ -45,5 +46,7 @@ class DatabaseProvider(Provider):
         )
 
     @provide(scope=Scope.REQUEST)
-    def user_repository(self, uow: SqlalchemyUow) -> UsersRepository:
+    def user_repository(
+        self, uow: SqlalchemyUow
+    ) -> AnyOf[IUsersRepository, UsersRepository]:
         return UsersRepository(uow=uow)

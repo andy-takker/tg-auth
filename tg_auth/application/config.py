@@ -1,8 +1,8 @@
-"""Application configuration.
+"""Application-level configuration.
 
-Configs are plain frozen dataclasses initialized from environment variables
-via ``from_env`` classmethods. Keep this module side-effect free so it can be
-safely imported in tests.
+Frozen dataclasses initialised from environment variables via
+``default_factory`` lambdas. Per-adapter sub-configs (e.g. ``DatabaseConfig``)
+live next to their adapter and are aggregated here.
 """
 
 from dataclasses import dataclass, field
@@ -29,13 +29,13 @@ class SessionConfig:
 
     secret_key: str = field(default_factory=lambda: environ["APP_SECRET_KEY"])
     cookie_name: str = "session"
-    max_age_seconds: int = 60 * 60 * 24 * 30  # 30 дней
+    max_age_seconds: int = 60 * 60 * 24 * 30  # 30 days
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class HttpConfig:
-    host: str = "0.0.0.0"
-    port: int = 8000
+    host: str = field(default_factory=lambda: environ.get("APP_HTTP_HOST", "0.0.0.0"))
+    port: int = field(default_factory=lambda: int(environ.get("APP_HTTP_PORT", 8000)))
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)

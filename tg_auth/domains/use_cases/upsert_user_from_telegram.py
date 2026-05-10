@@ -4,10 +4,10 @@ import jwt
 from jwt import PyJWKClient
 from litestar.exceptions import NotAuthorizedException
 
-from tg_auth.adapters.database.repositories.users import UsersRepository
-from tg_auth.domain.entities.telegram import TelegramAuthDTO
-from tg_auth.domain.entities.user import UserDTO
-from tg_auth.domain.uow import AbstractUow
+from tg_auth.domains.entities.telegram import TelegramAuthDTO
+from tg_auth.domains.entities.user import UserDTO
+from tg_auth.domains.interfaces.users import IUsersRepository
+from tg_auth.domains.uow import AbstractUow
 
 
 class UpsertUserFromTelegramUseCase:
@@ -15,7 +15,7 @@ class UpsertUserFromTelegramUseCase:
         self,
         uow: AbstractUow,
         jwks_client: PyJWKClient,
-        users_repo: UsersRepository,
+        users_repo: IUsersRepository,
         telegram_client_id: str,
         telegram_issuer: str,
     ) -> None:
@@ -35,9 +35,9 @@ class UpsertUserFromTelegramUseCase:
             )
         except (jwt.PyJWTError, ValueError) as e:
             raise NotAuthorizedException(detail=f"Invalid id_token: {e}") from e
+
         async with self._uow:
-            user = await self._users_repo.upsert_user_from_claims(claims)
-        return UserDTO(id=user.id, name=user.name, phone_number=user.phone_number)
+            return await self._users_repo.upsert_user_from_claims(claims)
 
 
 def _verify_telegram_id_token(

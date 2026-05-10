@@ -4,7 +4,7 @@ from alembic.config import CommandLine
 
 from tg_auth.adapters.database.config import DatabaseConfig
 from tg_auth.adapters.database.utils import make_alembic_config
-from tg_auth.logging import LoggingConfig, setup_logging
+from tg_auth.application.logging import LoggingConfig, setup_logging
 
 
 def main() -> None:

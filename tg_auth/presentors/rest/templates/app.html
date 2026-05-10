@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tg-auth — signed in</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      margin: 24px;
+      padding: 32px 28px;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .subtitle {
+      margin: 0 0 24px 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    dl {
+      margin: 0 0 24px 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      column-gap: 18px;
+      row-gap: 10px;
+      font-size: 14px;
+    }
+    dt {
+      color: var(--muted);
+      font-weight: 500;
+    }
+    dd {
+      margin: 0;
+      color: var(--text);
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      word-break: break-all;
+    }
+    dd.muted { color: var(--muted); font-style: italic; }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 500;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--card-border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+    .btn-danger:hover { background: var(--danger-hover); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .footer {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--card-border);
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .footer code {
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>You're signed in</h1>
+    <p class="subtitle">Authenticated via Telegram OIDC.</p>
+
+    <dl>
+      <dt>User ID</dt>
+      <dd>{{ user.id }}</dd>
+
+      <dt>Name</dt>
+      {% if user.name %}
+        <dd>{{ user.name }}</dd>
+      {% else %}
+        <dd class="muted">— not provided —</dd>
+      {% endif %}
+
+      <dt>Phone</dt>
+      {% if user.phone_number %}
+        <dd>{{ user.phone_number }}</dd>
+      {% else %}
+        <dd class="muted">— not granted —</dd>
+      {% endif %}
+    </dl>
+
+    <div class="actions">
+      <button class="btn-secondary" type="button" onclick="window.location.reload()">Reload</button>
+      <button class="btn-danger" type="button" id="logout-btn">Log out</button>
+    </div>
+
+    <div class="footer">
+      Session lives in a signed cookie. <code>POST /api/v1/auth/logout</code> clears it.
+    </div>
+  </main>
+
+  <script>
+    document.getElementById("logout-btn").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const res = await fetch("/api/v1/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (res.ok) {
+          window.location.href = "/";
+        } else {
+          btn.disabled = false;
+          alert("Logout failed: " + res.status);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        alert("Logout failed: " + err);
+      }
+    });
+  </script>
+</body>
+</html>

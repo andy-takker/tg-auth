@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint (ruff + format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+      - name: ruff check
+        run: uv run ruff check ./tg_auth ./tests
+      - name: ruff format --check
+        run: uv run ruff format --check ./tg_auth ./tests
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+      - name: mypy
+        run: uv run mypy --config-file ./pyproject.toml ./tg_auth
+
+  test:
+    name: Tests + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-groups --all-extras
+      - name: pytest
+        run: |
+          uv run pytest ./tests \
+            --junitxml=./junit.xml \
+            --cov=./tg_auth \
+            --cov-report=xml \
+            --cov-report=term
+      - name: Upload junit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit
+          path: junit.xml
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml

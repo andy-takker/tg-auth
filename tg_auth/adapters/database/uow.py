@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
 )
 
-from tg_auth.domain.uow import AbstractUow
+from tg_auth.domains.uow import AbstractUow
 
 logger = logging.getLogger(__name__)
 
