@@ -82,7 +82,7 @@ async def telegram_login(
     )
 
 
-@post("/api/v1/auth/refresh")
+@post("/api/v1/auth/refresh", status_code=HTTPStatus.OK)
 @inject
 async def refresh_tokens(
     data: RefreshDTO,
