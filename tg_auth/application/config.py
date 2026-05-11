@@ -39,11 +39,35 @@ class HttpConfig:
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
+class JwtConfig:
+    """Access + refresh JWT signing.
+
+    Secrets here are independent from ``SessionConfig.secret_key`` — the
+    cookie session uses AES (16/24/32 byte key); JWT uses HMAC-SHA256.
+    """
+
+    secret: str = field(
+        default_factory=lambda: environ.get("APP_JWT_SECRET", "change-me-in-prod")
+    )
+    algorithm: str = "HS256"
+    issuer: str = "tg-auth"
+    access_ttl_seconds: int = field(
+        default_factory=lambda: int(environ.get("APP_JWT_ACCESS_TTL", 60 * 15))
+    )  # 15 minutes
+    refresh_ttl_seconds: int = field(
+        default_factory=lambda: int(
+            environ.get("APP_JWT_REFRESH_TTL", 60 * 60 * 24 * 7)
+        )
+    )  # 7 days
+
+
+@dataclass(frozen=True, kw_only=True, slots=True)
 class AppConfig:
     telegram: TelegramConfig = field(default_factory=lambda: TelegramConfig())
     session: SessionConfig = field(default_factory=lambda: SessionConfig())
     http: HttpConfig = field(default_factory=lambda: HttpConfig())
     database: DatabaseConfig = field(default_factory=lambda: DatabaseConfig())
+    jwt: JwtConfig = field(default_factory=lambda: JwtConfig())
     debug: bool = field(
         default_factory=lambda: environ.get("APP_DEBUG", "true").lower() == "true"
     )

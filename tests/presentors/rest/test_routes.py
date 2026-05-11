@@ -26,7 +26,11 @@ async def test_login_creates_user_and_sets_cookie(
 
     assert response.status_code == HTTP_200_OK
     body = response.json()
-    assert body["name"] == "Test User"
+    assert body["user"]["name"] == "Test User"
+    assert body["tokens"]["access_token"]
+    assert body["tokens"]["refresh_token"]
+    assert body["tokens"]["token_type"] == "Bearer"
+    assert body["tokens"]["expires_in"] > 0
     assert "session" in response.cookies
 
 
@@ -130,3 +134,94 @@ async def test_health_ready_returns_ok(client: AsyncTestClient) -> None:
     body = response.json()
     assert body["status"] == "ok"
     assert any(c["name"] == "database" for c in body["checks"])
+
+
+# ---------------------------------------------------------------------------
+# JWT — access + refresh tokens
+# ---------------------------------------------------------------------------
+
+
+async def test_me_with_access_token_returns_user(
+    client: AsyncTestClient, make_id_token: Callable[..., str]
+) -> None:
+    login = await client.post(
+        "/api/v1/auth/telegram", json={"id_token": make_id_token()}
+    )
+    access = login.json()["tokens"]["access_token"]
+
+    response = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {access}"}
+    )
+
+    assert response.status_code == HTTP_200_OK
+    assert response.json()["name"] == "Test User"
+
+
+async def test_me_without_bearer_returns_401(client: AsyncTestClient) -> None:
+    response = await client.get("/api/v1/me")
+
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+
+
+async def test_me_with_refresh_token_returns_401(
+    client: AsyncTestClient, make_id_token: Callable[..., str]
+) -> None:
+    """A refresh token must not be accepted on a route that wants an access
+    token — the ``type`` claim is checked."""
+    login = await client.post(
+        "/api/v1/auth/telegram", json={"id_token": make_id_token()}
+    )
+    refresh = login.json()["tokens"]["refresh_token"]
+
+    response = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {refresh}"}
+    )
+
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+
+
+async def test_refresh_returns_new_pair(
+    client: AsyncTestClient, make_id_token: Callable[..., str]
+) -> None:
+    login = await client.post(
+        "/api/v1/auth/telegram", json={"id_token": make_id_token()}
+    )
+    refresh = login.json()["tokens"]["refresh_token"]
+
+    response = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh}
+    )
+
+    assert response.status_code == HTTP_200_OK
+    body = response.json()
+    assert body["access_token"]
+    assert body["refresh_token"]
+    assert body["token_type"] == "Bearer"
+    # New access token can authenticate.
+    me = await client.get(
+        "/api/v1/me", headers={"Authorization": f"Bearer {body['access_token']}"}
+    )
+    assert me.status_code == HTTP_200_OK
+
+
+async def test_refresh_with_access_token_returns_401(
+    client: AsyncTestClient, make_id_token: Callable[..., str]
+) -> None:
+    login = await client.post(
+        "/api/v1/auth/telegram", json={"id_token": make_id_token()}
+    )
+    access = login.json()["tokens"]["access_token"]
+
+    response = await client.post("/api/v1/auth/refresh", json={"refresh_token": access})
+
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+
+
+async def test_refresh_with_invalid_token_returns_401(
+    client: AsyncTestClient,
+) -> None:
+    response = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": "garbage"}
+    )
+
+    assert response.status_code == HTTP_401_UNAUTHORIZED

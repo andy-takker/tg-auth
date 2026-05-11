@@ -1,17 +1,11 @@
-"""Domain-level interface for the users repository.
+from abc import ABC, abstractmethod
+from typing import Any
 
-Use cases depend on this Protocol, never on the concrete SQLAlchemy
-implementation in ``tg_auth.adapters.database``. That keeps the dependency
-direction inbound (adapters → domains, not the other way).
-"""
-
-from typing import Any, Protocol
-from uuid import UUID
-
-from tg_auth.domains.entities.user import UserDTO
+from tg_auth.domains.entities.user import UserDTO, UserID
 
 
-class IUsersRepository(Protocol):
+class IUsersRepository(ABC):
+    @abstractmethod
     async def upsert_user_from_claims(self, claims: dict[str, Any]) -> UserDTO:
         """Idempotently turn Telegram OIDC claims into a persisted user.
 
@@ -20,6 +14,8 @@ class IUsersRepository(Protocol):
         2. existing user by ``phone_number`` (cross-channel link);
         3. create new user + telegram_account.
         """
-        ...
+        pass
 
-    async def fetch_user_by_id(self, user_id: UUID) -> UserDTO | None: ...
+    @abstractmethod
+    async def fetch_user_by_id(self, user_id: UserID) -> UserDTO | None:
+        pass

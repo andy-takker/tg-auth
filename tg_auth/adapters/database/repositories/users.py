@@ -1,25 +1,13 @@
-"""Concrete SQLAlchemy implementation of ``IUsersRepository``.
-
-Public methods return :class:`UserDTO` (a domain entity). The internal
-helpers that talk to ORM models are private — they deal with table rows
-inside a single session and never leak across the layer boundary.
-"""
-
 from typing import Any
-from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from tg_auth.adapters.database.tables import TelegramAccount, User
 from tg_auth.adapters.database.uow import SqlalchemyUow
-from tg_auth.domains.entities.user import UserDTO
+from tg_auth.domains.entities.user import UserDTO, UserID
 from tg_auth.domains.interfaces.users import IUsersRepository
-
-
-def _to_dto(user: User) -> UserDTO:
-    return UserDTO(id=user.id, name=user.name, phone_number=user.phone_number)
 
 
 class UsersRepository(IUsersRepository):
@@ -48,34 +36,47 @@ class UsersRepository(IUsersRepository):
                 telegram_account.phone_number = phone
                 if not telegram_account.user.phone_number:
                     telegram_account.user.phone_number = phone
-            return _to_dto(telegram_account.user)
+            return UserDTO(
+                id=UserID(telegram_account.user.id),
+                name=telegram_account.user.name,
+                phone_number=telegram_account.user.phone_number,
+            )
 
         user: User | None = None
         if phone:
             user = await self._fetch_user_by_phone_number(phone)
 
         if user is None:
-            user = User(phone_number=phone, name=name)
-            self._session.add(user)
-            await self._session.flush()
+            stmt = insert(User).values(phone_number=phone, name=name).returning(User)
+            user = (await self._session.scalars(stmt)).one()
 
-        self._session.add(
-            TelegramAccount(
-                user_id=user.id,
-                telegram_id=telegram_id,
-                username=username,
-                name=name,
-                picture=picture,
-                phone_number=phone,
-            )
+        tg_stmt = insert(TelegramAccount).values(
+            user_id=user.id,
+            telegram_id=telegram_id,
+            username=username,
+            name=name,
+            picture=picture,
+            phone_number=phone,
         )
-        await self._session.flush()
-        return _to_dto(user)
+        await self._session.execute(tg_stmt)
+        return UserDTO(
+            id=UserID(user.id),
+            name=user.name,
+            phone_number=user.phone_number,
+        )
 
-    async def fetch_user_by_id(self, user_id: UUID) -> UserDTO | None:
+    async def fetch_user_by_id(self, user_id: UserID) -> UserDTO | None:
         stmt = select(User).where(User.id == user_id)
         user = (await self._session.execute(stmt)).scalar_one_or_none()
-        return _to_dto(user) if user else None
+        return (
+            UserDTO(
+                id=UserID(user.id),
+                name=user.name,
+                phone_number=user.phone_number,
+            )
+            if user
+            else None
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers — they deal with ORM models inside a single session

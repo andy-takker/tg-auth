@@ -12,7 +12,8 @@ from litestar.template.config import TemplateConfig
 from tg_auth.adapters.database.config import DatabaseConfig
 from tg_auth.adapters.database.di import DatabaseProvider
 from tg_auth.adapters.healthcheck.di import HealthcheckProvider
-from tg_auth.application.config import AppConfig
+from tg_auth.adapters.jwt.di import JwtProvider
+from tg_auth.application.config import AppConfig, JwtConfig
 from tg_auth.domains.di import DomainProvider
 from tg_auth.presentors.rest.controllers import route_handlers
 
@@ -49,9 +50,11 @@ def create_app(
         DatabaseProvider(),
         DomainProvider(),
         HealthcheckProvider(),
+        JwtProvider(),
         context={
             AppConfig: config,
             DatabaseConfig: config.database,
+            JwtConfig: config.jwt,
             PyJWKClient: jwks_client,
         },
     )
@@ -68,6 +71,8 @@ def create_app(
             r"^/health/live$",
             r"^/health/ready$",
             r"^/api/v1/auth/logout$",
+            r"^/api/v1/auth/refresh$",
+            r"^/api/v1/me$",
         ],
     )
 

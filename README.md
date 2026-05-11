@@ -232,12 +232,14 @@ The split follows the layered / clean-architecture conventions used by [`andy-ta
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/` | Login page. Redirects to `/app` if a valid session is present; otherwise renders `index.html`. |
-| `POST` | `/api/v1/auth/telegram` | Accepts `{ "id_token": "<jwt>" }`. Validates the JWT, upserts user + telegram-account, sets cookie session, returns `UserDTO`. **Rate-limited (30 req/min/IP).** |
-| `POST` | `/api/v1/auth/logout` | Clears the cookie session. Returns 204. |
-| `GET` | `/app` | The "logged-in" route. Renders `app.html` with the user's name + phone + a Logout button. **Self-heals** if the session points to a user that no longer exists in DB (clears cookie and redirects to `/`). |
-| `GET` | `/health/live` | Liveness probe — always 200 while the process is alive. |
-| `GET` | `/health/ready` | Readiness probe — fans out across registered `IHealthcheck` implementations (currently `DatabaseHealthcheck`). Returns 200 with per-component status, or 503 if anything is down. |
+| `GET` | `/` | Login page. Redirects to `/app` if the cookie session is valid; otherwise renders `index.html`. |
+| `POST` | `/api/v1/auth/telegram` | Accepts `{ "id_token": "<jwt>" }` from the Telegram widget. Validates the JWT, upserts user + telegram-account, sets a cookie session **and** returns an access + refresh token pair. **Rate-limited.** |
+| `POST` | `/api/v1/auth/refresh` | Accepts `{ "refresh_token": "<jwt>" }`. Validates it, confirms the user still exists, returns a new `TokenPair`. |
+| `GET`  | `/api/v1/me` | Protected JSON endpoint. Requires `Authorization: Bearer <access_token>`. Returns `UserDTO`. |
+| `POST` | `/api/v1/auth/logout` | Clears the cookie session. Returns 204. (Bearer tokens are stateless — clients discard them on logout.) |
+| `GET`  | `/app` | HTML status page. Reads the cookie session, renders `app.html` with the user's name + phone + a Logout button. Self-heals stale sessions. |
+| `GET`  | `/health/live` | Liveness probe — always 200 while the process is alive. |
+| `GET`  | `/health/ready` | Readiness probe — fans out across registered `IHealthcheck` implementations (currently `DatabaseHealthcheck`). Returns 200 with per-component status, or 503 if anything is down. |
 
 ### `POST /api/v1/auth/telegram` — request/response
 
@@ -254,11 +256,21 @@ Set-Cookie: session=…; HttpOnly; Secure; SameSite=Lax
 Content-Type: application/json
 
 {
-  "id": "8f7c1e2a-…-…",         // your internal user UUID
-  "name": "Jane Doe",
-  "phone_number": "+15551234567"  // null if user didn't grant phone scope
+  "user": {
+    "id": "8f7c1e2a-…-…",
+    "name": "Jane Doe",
+    "phone_number": "+15551234567"
+  },
+  "tokens": {
+    "access_token":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…",
+    "token_type": "Bearer",
+    "expires_in": 900
+  }
 }
 ```
+
+Use `tokens.access_token` as `Authorization: Bearer …` on every API call. When the access token expires, exchange `tokens.refresh_token` at `POST /api/v1/auth/refresh` for a new pair. The cookie session is what keeps the HTML pages logged in; the tokens are for the JSON API.
 
 Failure modes:
 

@@ -5,10 +5,12 @@ from jwt import PyJWKClient
 
 from tg_auth.application.config import AppConfig
 from tg_auth.domains.interfaces.healthcheck import IHealthcheck
+from tg_auth.domains.interfaces.tokens import ITokenIssuer
 from tg_auth.domains.interfaces.users import IUsersRepository
 from tg_auth.domains.uow import AbstractUow
 from tg_auth.domains.use_cases.check_readiness import CheckReadinessUseCase
 from tg_auth.domains.use_cases.fetch_user_by_id import FetchUserByIDUseCase
+from tg_auth.domains.use_cases.refresh_tokens import RefreshTokensUseCase
 from tg_auth.domains.use_cases.upsert_user_from_telegram import (
     UpsertUserFromTelegramUseCase,
 )
@@ -44,6 +46,17 @@ class DomainProvider(Provider):
         users_repo: IUsersRepository,
     ) -> FetchUserByIDUseCase:
         return FetchUserByIDUseCase(uow=uow, users_repo=users_repo)
+
+    @provide
+    def refresh_tokens(
+        self,
+        uow: AbstractUow,
+        token_issuer: ITokenIssuer,
+        users_repo: IUsersRepository,
+    ) -> RefreshTokensUseCase:
+        return RefreshTokensUseCase(
+            uow=uow, token_issuer=token_issuer, users_repo=users_repo
+        )
 
     @provide
     def check_readiness(

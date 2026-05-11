@@ -111,6 +111,9 @@ def app_config(db_path: Path, monkeypatch: pytest.MonkeyPatch) -> AppConfig:
     monkeypatch.setenv("APP_TG_CLIENT_ID", TEST_CLIENT_ID)
     # Litestar's CookieBackendConfig requires exactly 16/24/32 bytes (AES key).
     monkeypatch.setenv("APP_SECRET_KEY", "0123456789abcdef0123456789abcdef")
+    monkeypatch.setenv("APP_JWT_SECRET", "test-jwt-secret-not-for-prod")
+    monkeypatch.setenv("APP_JWT_ACCESS_TTL", "900")
+    monkeypatch.setenv("APP_JWT_REFRESH_TTL", "604800")
     monkeypatch.setenv("APP_DB_URL", f"sqlite+aiosqlite:///{db_path}")
     monkeypatch.setenv("APP_DEBUG", "false")
     return AppConfig()
